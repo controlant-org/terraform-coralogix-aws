@@ -25,7 +25,7 @@ resource "random_string" "this" {
 
 module "lambda" {
   source                 = "terraform-aws-modules/lambda/aws"
-  version                = "3.2.1"
+  version                = "3.3.1"
 
   function_name          = local.function_name
   description            = "Send CloudWatch logs to Coralogix."
@@ -51,7 +51,6 @@ module "lambda" {
   role_name              = "${local.function_name}-Role"
   role_description       = "Role for ${local.function_name} Lambda Function."
   create_current_version_allowed_triggers = false
-  create_async_event_config               = true
   attach_async_event_policy               = true
   allowed_triggers = {
     for index in range(length(var.log_groups)) : "AllowExecutionFromCloudWatch-${index}" => {
@@ -81,4 +80,27 @@ resource "aws_sns_topic_subscription" "this" {
   topic_arn = aws_sns_topic.this.arn
   protocol  = "email"
   endpoint  = var.notification_email
+}
+
+resource "aws_lambda_function_event_invoke_config" "current_version" {
+  function_name = local.function_name
+  qualifier = module.lambda.lambda_function_version
+
+  destination_config {
+    on_failure {
+      destination = aws_sns_topic.this.arn
+    }
+  }
+}
+
+resource "aws_lambda_function_event_invoke_config" "unqualified_alias" {
+  function_name = local.function_name
+
+  destination_config {
+    on_failure {
+      destination = aws_sns_topic.this.arn
+    }
+  }
+
+  depends_on = [aws_lambda_function_event_invoke_config.current_version]
 }
