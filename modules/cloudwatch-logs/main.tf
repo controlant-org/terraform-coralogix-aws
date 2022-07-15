@@ -14,8 +14,8 @@ locals {
 }
 
 data "aws_cloudwatch_log_group" "this" {
-  count    = length(var.log_groups)
-  name     = element(var.log_groups, count.index)
+  count = length(var.log_groups)
+  name  = element(var.log_groups, count.index)
 }
 
 resource "random_string" "this" {
@@ -24,8 +24,8 @@ resource "random_string" "this" {
 }
 
 module "lambda" {
-  source                 = "terraform-aws-modules/lambda/aws"
-  version                = "3.3.1"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "3.3.1"
 
   function_name          = local.function_name
   description            = "Send CloudWatch logs to Coralogix."
@@ -46,10 +46,10 @@ module "lambda" {
     buffer_charset  = var.buffer_charset
     sampling        = tostring(var.sampling_rate)
   }
-  policy_path            = "/coralogix/"
-  role_path              = "/coralogix/"
-  role_name              = "${local.function_name}-Role"
-  role_description       = "Role for ${local.function_name} Lambda Function."
+  policy_path                             = "/coralogix/"
+  role_path                               = "/coralogix/"
+  role_name                               = "${local.function_name}-Role"
+  role_description                        = "Role for ${local.function_name} Lambda Function."
   create_current_version_allowed_triggers = false
   attach_async_event_policy               = true
   allowed_triggers = {
@@ -84,13 +84,15 @@ resource "aws_sns_topic_subscription" "this" {
 
 resource "aws_lambda_function_event_invoke_config" "current_version" {
   function_name = local.function_name
-  qualifier = module.lambda.lambda_function_version
+  qualifier     = module.lambda.lambda_function_version
 
   destination_config {
     on_failure {
       destination = aws_sns_topic.this.arn
     }
   }
+
+  depends_on = [module.lambda]
 }
 
 resource "aws_lambda_function_event_invoke_config" "unqualified_alias" {
@@ -102,5 +104,8 @@ resource "aws_lambda_function_event_invoke_config" "unqualified_alias" {
     }
   }
 
-  depends_on = [aws_lambda_function_event_invoke_config.current_version]
+  depends_on = [
+    module.lambda,
+    aws_lambda_function_event_invoke_config.current_version
+  ]
 }

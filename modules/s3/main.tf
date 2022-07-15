@@ -23,8 +23,8 @@ resource "random_string" "this" {
 }
 
 module "lambda" {
-  source                 = "terraform-aws-modules/lambda/aws"
-  version                = "3.3.1"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "3.3.1"
 
   function_name          = local.function_name
   description            = "Send logs from S3 bucket to Coralogix."
@@ -47,10 +47,10 @@ module "lambda" {
     sampling              = tostring(var.sampling_rate)
     debug                 = tostring(var.debug)
   }
-  policy_path            = "/coralogix/"
-  role_path              = "/coralogix/"
-  role_name              = "${local.function_name}-Role"
-  role_description       = "Role for ${local.function_name} Lambda Function."
+  policy_path                             = "/coralogix/"
+  role_path                               = "/coralogix/"
+  role_name                               = "${local.function_name}-Role"
+  role_description                        = "Role for ${local.function_name} Lambda Function."
   create_current_version_allowed_triggers = false
   attach_async_event_policy               = true
   attach_policy_statements                = true
@@ -95,13 +95,15 @@ resource "aws_sns_topic_subscription" "this" {
 
 resource "aws_lambda_function_event_invoke_config" "current_version" {
   function_name = local.function_name
-  qualifier = module.lambda.lambda_function_version
+  qualifier     = module.lambda.lambda_function_version
 
   destination_config {
     on_failure {
       destination = aws_sns_topic.this.arn
     }
   }
+
+  depends_on = [module.lambda]
 }
 
 resource "aws_lambda_function_event_invoke_config" "unqualified_alias" {
@@ -113,5 +115,8 @@ resource "aws_lambda_function_event_invoke_config" "unqualified_alias" {
     }
   }
 
-  depends_on = [aws_lambda_function_event_invoke_config.current_version]
+  depends_on = [
+    module.lambda,
+    aws_lambda_function_event_invoke_config.current_version
+  ]
 }
