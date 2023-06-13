@@ -30,7 +30,7 @@ module "lambda" {
   function_name          = local.function_name
   description            = "Send CloudWatch logs to Coralogix."
   handler                = "index.handler"
-  runtime                = "nodejs12.x"
+  runtime                = "nodejs16.x"
   architectures          = [var.architecture]
   memory_size            = var.memory_size
   timeout                = var.timeout
